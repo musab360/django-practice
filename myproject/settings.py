@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 from decouple import config
+from django.http import JsonResponse
+import jwt
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -71,6 +73,35 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'myproject.wsgi.application'
 
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+}
+
+from functools import wraps
+from decouple import config
+import jwt
+
+def require_jwt(view_func):
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        auth_header = request.headers.get('Authorization', '')
+        token = auth_header.replace('Bearer ', '') if auth_header.startswith('Bearer ') else None
+        
+        if not token:
+            return JsonResponse({"error": "Missing authorization token."}, status=401)
+        
+        try:
+            decoded = jwt.decode(token, config('JWT_SECRET'), algorithms=[config('JWT_ALGORITHM')])
+            request.jwt_user = decoded  # Attach user info to request
+        except jwt.ExpiredSignatureError:
+            return JsonResponse({"error": "Token has expired."}, status=401)
+        except jwt.InvalidTokenError:
+            return JsonResponse({"error": "Invalid token."}, status=401)
+            
+        return view_func(request, *args, **kwargs)
+    return wrapper
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
