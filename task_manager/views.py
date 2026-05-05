@@ -18,11 +18,12 @@ def task_creation(request):
     )
     return JsonResponse({"response": "Task created successfully!"})
 
-@csrf_exempt
 @require_jwt
+@csrf_exempt
 def task_retrieval(request):
     user = request.jwt_user  # Access decoded JWT payload
     tasks = TaskCreation.objects.filter(created_by_id=user.get("user_id"))
+    print(tasks)
     return JsonResponse({"tasks": tasks})
 
 @csrf_exempt
